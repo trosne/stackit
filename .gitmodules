@@ -1,0 +1,3 @@
+[submodule "httpclient"]
+	path = httpclient
+	url = https://github.com/trosne/httpclient.git
