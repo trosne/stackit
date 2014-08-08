@@ -20,7 +20,6 @@ static char* _json_string_get(json_t* str_obj)
   const char* str = json_string_value(str_obj);
   char* result = (char*) malloc(strlen(str) + 1);
   strcpy(result, str);
-  //json_decref(str_obj);
   /* str is free'd by json_decref(). Leaving this to local implementation */
   return result;
 }
@@ -48,10 +47,6 @@ static user_t* parse_json_user(json_t* user, user_t* result)
     result->display_name = _json_string_get(display_name);
   }
   
-  //json_decref(reputation);
-  //json_decref(user_id);
-  //json_decref(display_name);
-  //json_decref(user);
   return result;
 }
 
@@ -75,12 +70,10 @@ static post_t* parse_json_post(json_t* post, post_t* result)
   json_t* post_id = json_object_get(post, "post_id");
   if (!json_is_integer(post_id))
   {
-    //json_decref(post_id);
     post_id = json_object_get(post, "answer_id");
   }
   if (!json_is_integer(post_id))
   {
-    //json_decref(post_id);
     post_id = json_object_get(post, "question_id");
   }
 
@@ -91,9 +84,6 @@ static post_t* parse_json_post(json_t* post, post_t* result)
   if (json_is_integer(score))
     result->score = (int32_t) json_integer_value(score);
 
-  //json_decref(body);
-  //json_decref(post_id);
-  //json_decref(score);
   return result;
 }
 
@@ -111,8 +101,6 @@ static answer_t* parse_json_answer(json_t* answer, answer_t* result)
   if (json_is_boolean(is_accepted))
     result->is_accepted = (json_typeof(is_accepted) == JSON_TRUE);
 
-  //json_decref(is_accepted);
-  //json_decref(answer);
   return result;
 }
 
@@ -167,17 +155,9 @@ static question_t* parse_json_question(json_t* question, question_t* result)
       json_t* tag = json_array_get(tags, i);
       if (json_is_string(tag))
         result->tags[i] = _json_string_get(tag);
-      //json_decref(tag);
     }
   }
 
-  //json_decref(title);
-  //json_decref(link);
-  //json_decref(answers);
-  //json_decref(is_answered);
-  //json_decref(view_count);
-  ////json_decref(tags);
-  //json_decref(question);
   return result;
 }
 
@@ -282,7 +262,7 @@ stack_search_res_t* stack_search(stack_query_t* query)
     if (json_is_object(question))
       result->questions[i] = parse_json_question(question, NULL);
   }
-  json_decref(root); //this breaks my memory structure somehow.
+  json_decref(root); 
   
   http_response_free(http_resp);
   return result;
@@ -331,7 +311,6 @@ void stack_question_fill_answers(question_t* question)
   {
     parse_json_question(item, question);
   }
-  //json_decref(item);
   json_decref(root);
   return;
 }
