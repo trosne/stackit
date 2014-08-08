@@ -1,4 +1,5 @@
 #include "stackexchange.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -15,5 +16,9 @@ int main()
     printf("TITLE: %s\nUSER: %s\n", 
         result->questions[i]->title, 
         result->questions[i]->post->owner->display_name);
+
+    stack_question_free(result->questions[i]);
   }
+  free(result->questions);
+  free(result);
 }
