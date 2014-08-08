@@ -76,4 +76,6 @@ stack_search_res_t* stack_search(stack_query_t* query);
 
 void stack_question_fill_answers(question_t* question);
 
+void stack_question_free(question_t* question);
+
 #endif
