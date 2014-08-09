@@ -42,7 +42,7 @@ static user_t* parse_json_user(json_t* user, user_t* result)
     result->user_id = json_integer_value(user_id);
 
   json_t* display_name = json_object_get(user, "display_name");
-  if (json_is_string(display_name))
+  if (json_is_string(display_name) && result->display_name == NULL)
   {
     result->display_name = _json_string_get(display_name);
   }
@@ -64,7 +64,7 @@ static post_t* parse_json_post(json_t* post, post_t* result)
     result->owner = parse_json_user(owner, result->owner);
 
   json_t* body = json_object_get(post, "body_markdown");
-  if (json_is_string(body))
+  if (json_is_string(body) && result->body == NULL)
     result->body = _json_string_get(body);
 
   json_t* post_id = json_object_get(post, "post_id");
@@ -94,7 +94,6 @@ static answer_t* parse_json_answer(json_t* answer, answer_t* result)
     result = (answer_t*) malloc(sizeof(answer_t));
     memset(result, 0, sizeof(answer_t));
   }
-  
   result->post = parse_json_post(answer, result->post);
 
   json_t* is_accepted = json_object_get(answer, "is_accepted");
@@ -111,8 +110,7 @@ static question_t* parse_json_question(json_t* question, question_t* result)
     result = (question_t*) malloc(sizeof(question_t));
     memset(result, 0, sizeof(question_t));
   }
-
-  result->post = parse_json_post(question, NULL);
+  result->post = parse_json_post(question, result->post);
 
   json_t* title = json_object_get(question, "title");
   if (json_is_string(title))
@@ -125,14 +123,18 @@ static question_t* parse_json_question(json_t* question, question_t* result)
   json_t* answers = json_object_get(question, "answers");
   if (json_is_array(answers))
   {
-    result->answer_count = json_array_size(answers);
-    result->answers = (answer_t**) malloc(sizeof(answer_t*) * result->answer_count);
+    if (result->answers == NULL)
+    {
+      result->answer_count = json_array_size(answers);
+      result->answers = (answer_t**) malloc(sizeof(answer_t*) * result->answer_count);
+      memset(result->answers, 0, sizeof(answer_t*) * result->answer_count);
+    }
 
     for (uint16_t i = 0; i < result->answer_count; ++i)
     {
       json_t* answer = json_array_get(answers, i);
       if (json_is_object(answer))
-        result->answers[i] = parse_json_answer(answer, NULL);
+        result->answers[i] = parse_json_answer(answer, result->answers[i]);
     }
   }
   
@@ -214,7 +216,6 @@ stack_search_res_t* stack_search(stack_query_t* query)
   memset(search_string, 1, query_len + 1);
 
   sprintf(search_string, "api.stackexchange.com/2.2/search?page=%d&pagesize=%d&order=desc&sort=votes&intitle=%s&site=%s&filter=%s&tagged=", query->page, query->results, query->in_title, query->site, FILTER_SEARCH);
-  printf("LENGTH: %d\nSEARCH STRING: %s\n", query_len, search_string);
 
   for (uint8_t i = 0; i < query->tag_count; ++i)
   {
@@ -278,7 +279,7 @@ void stack_question_fill_answers(question_t* question)
   query_len += strlen(question->site);
   query_len += strlen(FILTER_ANSWERS);
 
-  char* search_string = (char*) malloc(query_len);
+  char* search_string = (char*) malloc(query_len + 1);
 
   sprintf(search_string, "api.stackexchange.com/2.2/questions/%ld?order=desc&sort=votes&site=%s&filter=%s", question->post->post_id, question->site, FILTER_ANSWERS);
 
@@ -292,7 +293,10 @@ void stack_question_fill_answers(question_t* question)
   }
   
   json_error_t error;
-  json_t* root = json_loads(http_resp->contents, 0, &error);
+  json_t* root = json_loadb(http_resp->contents, http_resp->length, 0, &error);
+
+
+  http_response_free(http_resp);
 
   if (!root)
   {
@@ -302,7 +306,7 @@ void stack_question_fill_answers(question_t* question)
   json_t* items = json_object_get(root, "items");
   if (!json_is_array(items))
   {
-    free(root);
+    json_decref(root);
     return; 
   }
 
@@ -337,7 +341,6 @@ void stack_answer_free(answer_t* answer)
   if (answer != NULL)
   {
     stack_post_free(answer->post);
-    stack_question_free(answer->question);
     SAFE_FREE(answer);
   }
 }
@@ -353,11 +356,11 @@ void stack_question_free(question_t* question)
       for (uint16_t i = 0; i < question->answer_count; ++i)
         stack_answer_free(question->answers[i]);
     SAFE_FREE(question->answers);
+    //SAFE_FREE(question->site);
     if (question->tags != NULL)
       for (uint16_t i = 0; i < question->tag_count; ++i)
         SAFE_FREE(question->tags[i]);
     SAFE_FREE(question->tags);
-    SAFE_FREE(question->site);
     SAFE_FREE(question);
   }
 }
