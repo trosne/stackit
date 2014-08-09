@@ -49,7 +49,6 @@ typedef struct
 struct _answer
 {
   post_t* post;
-  question_t* question;
   bool is_accepted;
 };
 
