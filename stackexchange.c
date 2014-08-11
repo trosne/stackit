@@ -281,7 +281,7 @@ void stack_question_fill_answers(question_t* question)
 
   char* search_string = (char*) malloc(query_len + 1);
 
-  sprintf(search_string, "api.stackexchange.com/2.2/questions/%ld?order=desc&sort=votes&site=%s&filter=%s", question->post->post_id, question->site, FILTER_ANSWERS);
+  sprintf(search_string, "api.stackexchange.com/2.2/questions/%ld?order=desc&sort=votes&site=%s&filter=%s", (unsigned long) question->post->post_id, question->site, FILTER_ANSWERS);
 
   http_response_t* http_resp = http_request(search_string, HTTP_REQ_GET, NULL, 0); 
   
@@ -310,10 +310,14 @@ void stack_question_fill_answers(question_t* question)
     return; 
   }
 
-  json_t* item = json_array_get(items, 0);
-  if (json_is_object(item))
+  for (uint16_t i = 0; i < json_array_size(items); ++i)
   {
-    parse_json_question(item, question);
+    json_t* item = json_array_get(items, i);
+    if (json_is_object(item))
+    {
+      parse_json_question(item, question);
+      break;
+    }
   }
   json_decref(root);
   return;
